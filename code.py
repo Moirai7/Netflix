@@ -108,46 +108,52 @@ def calJV(a,x,u,v,_lambda):
 	return jv
 
 def Task2(X_train,X_test):
+	x = X_train.values
 	ks = [50]
-	_lambdas = [0.01]
 	for k in ks :
+		_lambdas = [0.01]
 		for _lambda in _lambdas:
-			(a,u,v) = random(k,X_train)
-			count = 0
-			small = 0.0001
-			alphas = [2]
+			alphas = [0.001,0.002,0.003,0.01]
 			res = []
+			resj = []
 			for alpha in alphas :
-				while (count<10 and calJ(a,X_train,u,v,_lambda)>small) :
+				(a,u,v) = random(k,x)
+				count = 0
+				j = calJ(a,x,u,v,_lambda)
+				while (count<1000 and j>0.001) :
 					count += 1
-					u = u - alpha*calJU(a,X_train,u,v,_lambda)
-					v = v - alpha*calJV(a,X_train,u,v,_lambda)
-			x = u.dot(v.T)
-			print RMSE_np(X_train,x)
-			#print X_test
-			#print x
-			#tmp = pd.DataFrame(index=X_test.index,columns=X_test.columns)
-			#nx,ny =  X_test.shape
-			#for x in xrange(nx):
-			#	for y in xrange(ny):
-			#		tmp.loc[x[x,1],x[0,y]] = x[x,y] 
-			#res.append(RMSE(X_test,tmp))
-			#print res
+					u = u - alpha*calJU(a,x,u,v,_lambda)
+					v = v - alpha*calJV(a,x,u,v,_lambda)
+					j = calJ(a,x,u,v,_lambda)
+				resj.append(j)
+				pred = u.dot(v.T)
+				pred = pd.DataFrame(pred,index=X_train.index,columns=X_train.columns)
+				tmp = pd.DataFrame(index=X_test.index,columns=X_test.columns)
+				for i in X_test.index:
+					for j in X_test.columns:
+						tmp.loc[i,j] = pred.loc[i,j]
+				print X_test
+				print tmp
+				res.append(RMSE_np(X_test,tmp))
+				print res
+				print resj
+			plotData(alphas,res,'alpha','RMSE')
+			plotData(alphas,resj,'alpha','J')
 	pass
 
-def plotData(x,y,tstr):
+def plotData(x,y,xstr,ystr):
 	plt.plot(x,y)
-	plt.title(tstr)
-	plt.xlabel(tstr)
-	plt.ylabel('RMSE')
+	plt.title(xstr)
+	plt.xlabel(xstr)
+	plt.ylabel(ystr)
 	plt.show()
 
 if __name__ == '__main__':
 	(train,test,uid,fid) = readCSV()
-	'''
 	X_train = procData(train)
 	X_test = procData(test)
 
+	'''
 	import time
 	starttime = time.time()
 	start = time.clock()
@@ -158,18 +164,18 @@ if __name__ == '__main__':
 	endtime = time.time()
 	print 'time : ',str(end-start)
 	print 'time : ',str(endtime - starttime)
+
+	#X_train = procData_np(train)
+	#X_test = procData_np(test)
 	'''
 
-	X_train = procData_np(train)
-	#X_test = procData_np(test)
-	
-	#starttime = time.time()
-	#start = time.clock()
+	starttime = time.time()
+	start = time.clock()
 
-	#Task1_np(X_train,X_train)	
+	Task1_np(X_train.values,X_train.values)	
 	Task2(X_train,X_train)
 
-	#end = time.clock()
-        #endtime = time.time()
-        #print 'time : ',str(end-start)
-        #print 'time : ',str(endtime - starttime)
+	end = time.clock()
+        endtime = time.time()
+        print 'time : ',str(end-start)
+        print 'time : ',str(endtime - starttime)
