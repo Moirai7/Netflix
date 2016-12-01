@@ -3,9 +3,10 @@
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import pairwise_distances, cosine_similarity
 from sklearn.metrics import mean_squared_error
-
+from numpy import linalg as LA
 
 def readCSV():
 	#train = pd.read_csv('data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
@@ -41,7 +42,6 @@ def RMSE(X_test,X_pred):
 	return np.sqrt((np.square(X_test-X_pred).sum().sum())/(x*y))
 
 def RMSE_np(X_test,X_pred):
-	X_test = X_test[X_test.nonzero()].flatten()
 	return np.sqrt(mean_squared_error(X_pred, X_test))
 
 def Task1(X_train,X_test):
@@ -82,49 +82,69 @@ def Task1_np(X_train,X_test):
 	#计算测试集值
 	pred = similarity.dot(X_train) / np.array([np.abs(similarity).sum(axis=1)]).T
 	#评估准确率
-	print RMSE(X_test,pred)
+	print RMSE_np(X_test,pred)
+
+def random(k,X_train):
+	m,n = X_train.shape
+	u = np.random.rand(m,k)
+	v = np.random.rand(n,k)
+	a = np.where(X_train>0,1,X_train)
+	return (a,u,v)
+
+def fro(a):
+	return np.sqrt(np.square(a).sum())
 
 def calJ(a,x,u,v,_lambda):
-	j = 0
+	j = LA.norm(a*(x-u.dot(v.T)),'fro')**2/2+_lambda*LA.norm(u,'fro')**2+_lambda*LA.norm(v,'fro')**2
+	#j = fro(a*(x-u.dot(v.T)))**2/2+_lambda*fro(u)**2+_lambda*fro(v)**2
 	return j
 
 def calJU(a,x,u,v,_lambda):
-	ju = 0
+	ju = (a*(u.dot(v.T)-x)).dot(v)+2*_lambda*u
 	return ju
 
 def calJV(a,x,u,v,_lambda):
-	jv = 0
+	jv = (a*(u.dot(v.T)-x)).T.dot(u)+2*_lambda*v
 	return jv
 
-def random(k,X_train):
-	u = []
-	v = []
-	a = []
-	return (a,u,v)
-
 def Task2(X_train,X_test):
-	k = [0]
-	_lambdas = [1]
+	ks = [50]
+	_lambdas = [0.01]
 	for k in ks :
 		for _lambda in _lambdas:
 			(a,u,v) = random(k,X_train)
 			count = 0
 			small = 0.0001
-			alphas = [0.0001]
+			alphas = [2]
 			res = []
 			for alpha in alphas :
-				while (count<1000 or calJ(a,x,u,v,_lambda)>small) :
-					u = u - alpha*calJU()
-					v = v - alpha*calJV()
-			tmp = pd.DataFrame(index=X_test.index,columns=X_test.columns)
-			for x in X_test.index:
-				for y in X_test.columns:
-					tmp.loc[x,y] = X_train.loc[x,y]
-			res.append(RMSE(X_test,tmp))
+				while (count<10 and calJ(a,X_train,u,v,_lambda)>small) :
+					count += 1
+					u = u - alpha*calJU(a,X_train,u,v,_lambda)
+					v = v - alpha*calJV(a,X_train,u,v,_lambda)
+			x = u.dot(v.T)
+			print RMSE_np(X_train,x)
+			#print X_test
+			#print x
+			#tmp = pd.DataFrame(index=X_test.index,columns=X_test.columns)
+			#nx,ny =  X_test.shape
+			#for x in xrange(nx):
+			#	for y in xrange(ny):
+			#		tmp.loc[x[x,1],x[0,y]] = x[x,y] 
+			#res.append(RMSE(X_test,tmp))
+			#print res
 	pass
+
+def plotData(x,y,tstr):
+	plt.plot(x,y)
+	plt.title(tstr)
+	plt.xlabel(tstr)
+	plt.ylabel('RMSE')
+	plt.show()
 
 if __name__ == '__main__':
 	(train,test,uid,fid) = readCSV()
+	'''
 	X_train = procData(train)
 	X_test = procData(test)
 
@@ -138,16 +158,18 @@ if __name__ == '__main__':
 	endtime = time.time()
 	print 'time : ',str(end-start)
 	print 'time : ',str(endtime - starttime)
+	'''
 
 	X_train = procData_np(train)
-	X_test = procData_np(test)
+	#X_test = procData_np(test)
 	
-	starttime = time.time()
-	start = time.clock()
+	#starttime = time.time()
+	#start = time.clock()
 
-	Task1_np(X_train,X_test)	
+	#Task1_np(X_train,X_train)	
+	Task2(X_train,X_train)
 
-	end = time.clock()
-        endtime = time.time()
-        print 'time : ',str(end-start)
-        print 'time : ',str(endtime - starttime)
+	#end = time.clock()
+        #endtime = time.time()
+        #print 'time : ',str(end-start)
+        #print 'time : ',str(endtime - starttime)
