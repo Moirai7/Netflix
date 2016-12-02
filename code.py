@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/b	in/env python
 # -*- coding: utf-8 -*-
 
 import pandas as pd
@@ -10,8 +10,9 @@ from numpy import linalg as LA
 
 def readCSV():
 	train = pd.read_csv('data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
-	#train = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
 	test = pd.read_csv('data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
+	#train = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
+	#test = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
 	#uid = pd.read_csv('data/users.txt',header=None,names=['uid'],index_col=False)
 	#fid = pd.read_csv('data/movie_titles.txt',header=None,names=['fid','year','name'],index_col=False)
 	uid = []
@@ -111,18 +112,22 @@ def calJV(a,x,u,v,_lambda):
 
 def Task2(X_train,X_test):
 	x = X_train.values
-	ks = [50]
+	#ks = [10,20,30,40,50,60,70,80,90]
+	ks = np.arange(10,90,5)
+	maxs = {'k':0,'lambda':0,'alpha':0,'max':1000}
 	for k in ks :
-		_lambdas = [0.01]
+		#_lambdas = [0.001,0.003,0.006,0.009,0.01,0.03,0.06,0.09,0.1]
+		_lambdas = np.arange(0.001,0.1,0.004)
 		for _lambda in _lambdas:
-			alphas = [0.001,0.002,0.003,0.01]
+			#alphas = [0.0001,0.0003,0.0006,0.0009,0.001,0.003,0.006,0.009,0.01,0.03,0.06,0.09,0.1]
+			alphas = np.arange(0.0001,0.1,0.0004)
 			res = []
 			resj = []
 			for alpha in alphas :
 				(a,u,v) = random(k,x)
 				count = 0
 				j = calJ(a,x,u,v,_lambda)
-				while (count<1000 and j>0.001) :
+				while (count<10000 and j>0.001) :
 					count += 1
 					u = u - alpha*calJU(a,x,u,v,_lambda)
 					v = v - alpha*calJV(a,x,u,v,_lambda)
@@ -134,13 +139,27 @@ def Task2(X_train,X_test):
 				for i in X_test.index:
 					for j in X_test.columns:
 						tmp.loc[i,j] = pred.loc[i,j]
-				print X_test
-				print tmp
-				res.append(RMSE_np(X_test,tmp))
-				print res
-				print resj
-			plotData(alphas,res,'alpha','RMSE')
-			plotData(alphas,resj,'alpha','J')
+				print "#################"
+				print 'k ',str(k)
+				print 'lambda ',str(_lambda)
+				print 'alpha ',str(alpha)
+				#print '\n'
+				#print tmp
+				rmse = RMSE_np(X_test,tmp)
+				if maxs['max']>rmse:
+					maxs['k']=k
+					maxs['lambda']=_lambda
+					maxs['alpha']=alpha
+					maxs['max']=rmse
+				res.append(rmse)
+				print 'rmse ',str(rmse)
+			print 'result: lambda=',str(_lambda),'k=',str(k)
+			print res
+			print resj
+			#if _lambda==0.01 and k==50:
+			#	plotData(alphas,res,'alpha','RMSE')
+			#	plotData(alphas,resj,'alpha','J')
+	print maxs
 	pass
 
 def plotData(x,y,xstr,ystr):
@@ -148,6 +167,8 @@ def plotData(x,y,xstr,ystr):
 	plt.title(xstr)
 	plt.xlabel(xstr)
 	plt.ylabel(ystr)
+	plt.xticks(x)
+	plt.yticks(y)
 	plt.show()
 
 if __name__ == '__main__':
@@ -179,8 +200,8 @@ if __name__ == '__main__':
 	starttime = time.time()
 	start = time.clock()
 
-	Task1_np(X_train.values,X_test.values)	
-	#Task2(X_train,X_test)
+	#Task1_np(X_train.values,X_test.values)	
+	Task2(X_train,X_test)
 
 	end = time.clock()
         endtime = time.time()
