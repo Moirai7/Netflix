@@ -9,11 +9,13 @@ from sklearn.metrics import mean_squared_error
 from numpy import linalg as LA
 
 def readCSV():
-	#train = pd.read_csv('data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
-	train = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
+	train = pd.read_csv('data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
+	#train = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
 	test = pd.read_csv('data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
-	uid = pd.read_csv('data/users.txt',header=None,names=['uid'],index_col=False)
-	fid = pd.read_csv('data/movie_titles.txt',header=None,names=['fid','year','name'],index_col=False)
+	#uid = pd.read_csv('data/users.txt',header=None,names=['uid'],index_col=False)
+	#fid = pd.read_csv('data/movie_titles.txt',header=None,names=['fid','year','name'],index_col=False)
+	uid = []
+	fid = []
 	return (train,test,uid,fid)
 
 def showData(data):
@@ -149,12 +151,15 @@ def plotData(x,y,xstr,ystr):
 	plt.show()
 
 if __name__ == '__main__':
+	print 'start read train'
+	print 'start read test'
 	(train,test,uid,fid) = readCSV()
+	print 'start proc train'
 	X_train = procData(train)
+	print 'start proc test'
 	X_test = procData(test)
 
 	'''
-	import time
 	starttime = time.time()
 	start = time.clock()
 
@@ -169,11 +174,13 @@ if __name__ == '__main__':
 	#X_test = procData_np(test)
 	'''
 
+	import time
+	print 'start clock'
 	starttime = time.time()
 	start = time.clock()
 
-	Task1_np(X_train.values,X_train.values)	
-	Task2(X_train,X_train)
+	Task1_np(X_train.values,X_test.values)	
+	#Task2(X_train,X_test)
 
 	end = time.clock()
         endtime = time.time()
