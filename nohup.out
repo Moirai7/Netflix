@@ -1,0 +1,41 @@
+code.py:119: RuntimeWarning: invalid value encountered in multiply
+  j = LA.norm(a*(x-u.dot(v.T)),'fro')**2/2+_lambda*LA.norm(u,'fro')**2+_lambda*LA.norm(v,'fro')**2
+start read
+start proc
+(10000, 10000)
+(10000, 9983)
+start clock
+#################
+[[0 0 0 ..., 0 0 0]
+ [0 0 0 ..., 0 0 0]
+ [0 0 0 ..., 0 0 0]
+ ..., 
+ [0 0 0 ..., 0 0 0]
+ [0 0 0 ..., 0 0 0]
+ [0 0 0 ..., 0 0 0]]
+[[ inf -inf  inf ...,  inf  inf  inf]
+ [-inf  inf -inf ..., -inf -inf -inf]
+ [ inf -inf  inf ...,  inf  inf  inf]
+ ..., 
+ [ inf -inf  inf ...,  inf  inf  inf]
+ [ inf -inf  inf ...,  inf  inf  inf]
+ [ inf -inf  inf ...,  inf  inf  inf]]
+k  50
+lambda  0.01
+alpha  0.0001
+Traceback (most recent call last):
+  File "code.py", line 218, in <module>
+    #Task2(X_train.values,X_test.values,diff)
+  File "code.py", line 164, in Task2
+    rmse = RMSE_np(X_test,pred)
+  File "code.py", line 95, in RMSE_np
+    return np.sqrt(mean_squared_error(X_pred, X_test))
+  File "/usr/local/lib/python2.7/site-packages/sklearn/metrics/regression.py", line 231, in mean_squared_error
+    y_true, y_pred, multioutput)
+  File "/usr/local/lib/python2.7/site-packages/sklearn/metrics/regression.py", line 75, in _check_reg_targets
+    y_true = check_array(y_true, ensure_2d=False)
+  File "/usr/local/lib/python2.7/site-packages/sklearn/utils/validation.py", line 407, in check_array
+    _assert_all_finite(array)
+  File "/usr/local/lib/python2.7/site-packages/sklearn/utils/validation.py", line 58, in _assert_all_finite
+    " or a value too large for %r." % X.dtype)
+ValueError: Input contains NaN, infinity or a value too large for dtype('float64').

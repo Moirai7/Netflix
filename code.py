@@ -1,4 +1,4 @@
-#!/usr/b	in/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import pandas as pd
@@ -7,10 +7,11 @@ import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import pairwise_distances, cosine_similarity
 from sklearn.metrics import mean_squared_error
 from numpy import linalg as LA
+import gc
 
 def readCSV():
-	train = pd.read_csv('data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
-	test = pd.read_csv('data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
+	train = pd.read_csv('/Users/emma/Work/Netflix/data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
+	test = pd.read_csv('/Users/emma/Work/Netflix/data/netflix_test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
 	#train = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
 	#test = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
 	#uid = pd.read_csv('data/users.txt',header=None,names=['uid'],index_col=False)
@@ -23,15 +24,28 @@ def showData(data):
 	data.info()
 	print data.head()
 
-def procData(data):
-	uids = data.drop_duplicates(['uid'])['uid']
-	fids = data.drop_duplicates(['fid'])['fid']
-	df = pd.DataFrame(index= uids,columns=fids)
-	df = df.fillna(0)
-	for index, d in data.iterrows():
-                df.loc[d['uid'],d['fid']]=d['score']
-	return df
+def procData(train,test):
+	uids = train.drop_duplicates(['uid'])['uid'].sort_values()
+	fids = train.drop_duplicates(['fid'])['fid'].sort_values()
+	tfids = test.drop_duplicates(['fid'])['fid'].sort_values()
+	
+	diff = list(set(fids.tolist())-set(tfids.tolist()))
+	diff = list(map(lambda x: x-1,diff))
+	#fids = pd.concat([diff,fids]).drop_duplicates(keep=False)
 
+	df1 = pd.DataFrame(index= uids,columns=fids)
+	df2 = pd.DataFrame(index= uids,columns=tfids)
+	for index, d in train.iterrows():
+               	df1.loc[d['uid'],d['fid']]=d['score']
+	for index, d in test.iterrows():
+             	df2.loc[d['uid'],d['fid']]=d['score']
+	del train
+	del test
+	gc.collect()
+	df1 = df1.fillna(0)
+	df2 = df2.fillna(0)
+	return (df1,df2,diff)
+'''
 def procData_np(data):
 	uids = data.uid.unique().shape[0]
 	fids = data.fid.unique().shape[0]
@@ -43,9 +57,6 @@ def procData_np(data):
 def RMSE(X_test,X_pred):
 	x,y = X_test.shape
 	return np.sqrt((np.square(X_test-X_pred).sum().sum())/(x*y))
-
-def RMSE_np(X_test,X_pred):
-	return np.sqrt(mean_squared_error(X_pred, X_test))
 
 def Task1(X_train,X_test):
 	#为了减少运算量，先计算向量和
@@ -78,13 +89,20 @@ def Task1(X_train,X_test):
 			tmp.loc[x,y]=sum1/sum2
 	#评估准确率
 	print RMSE(X_test,tmp)
+'''
 
-def Task1_np(X_train,X_test):
+def RMSE_np(X_test,X_pred):
+	return np.sqrt(mean_squared_error(X_pred, X_test))
+
+def Task1_np(X_train,X_test,diff):
 	#计算相似度
 	similarity = cosine_similarity(X_train)
 	#计算测试集值
 	pred = similarity.dot(X_train) / np.array([np.abs(similarity).sum(axis=1)]).T
 	#评估准确率
+	print X_test
+	print pred
+	pred = np.delete(pred,diff,axis=1)
 	print RMSE_np(X_test,pred)
 
 def random(k,X_train):
@@ -110,56 +128,57 @@ def calJV(a,x,u,v,_lambda):
 	jv = (a*(u.dot(v.T)-x)).T.dot(u)+2*_lambda*v
 	return jv
 
-def Task2(X_train,X_test):
-	x = X_train.values
+def Task2(x,X_test,diff):
 	#ks = [10,20,30,40,50,60,70,80,90]
-	ks = np.arange(10,90,5)
-	maxs = {'k':0,'lambda':0,'alpha':0,'max':1000}
+	ks = np.arange(10,90,10)
+	mins = {'k':0,'lambda':0,'alpha':0,'min':1000}
 	for k in ks :
 		#_lambdas = [0.001,0.003,0.006,0.009,0.01,0.03,0.06,0.09,0.1]
-		_lambdas = np.arange(0.001,0.1,0.004)
+		_lambdas = np.arange(0.001,0.1,0.04)
+		_lambdas = [0.01]
 		for _lambda in _lambdas:
-			#alphas = [0.0001,0.0003,0.0006,0.0009,0.001,0.003,0.006,0.009,0.01,0.03,0.06,0.09,0.1]
-			alphas = np.arange(0.0001,0.1,0.0004)
+			#alphas = np.arange(0.000001,0.00001,0.000001)
+			#alphas =   [0.00006]
+			alphas = np.arange(0.00001,0.0001,0.00004)
 			res = []
 			resj = []
 			for alpha in alphas :
 				(a,u,v) = random(k,x)
 				count = 0
 				j = calJ(a,x,u,v,_lambda)
-				while (count<10000 and j>0.001) :
+				iters = []
+				while (count<30 and j>0.001) :
 					count += 1
 					u = u - alpha*calJU(a,x,u,v,_lambda)
 					v = v - alpha*calJV(a,x,u,v,_lambda)
 					j = calJ(a,x,u,v,_lambda)
-				resj.append(j)
-				pred = u.dot(v.T)
-				pred = pd.DataFrame(pred,index=X_train.index,columns=X_train.columns)
-				tmp = pd.DataFrame(index=X_test.index,columns=X_test.columns)
-				for i in X_test.index:
-					for j in X_test.columns:
-						tmp.loc[i,j] = pred.loc[i,j]
+					'''
+					if count%3 == 0:
+						iters.append(count)
+						resj.append(j)
+						pred = u.dot(v.T)
+						pred = np.delete(pred,diff,axis=1)
+						rmse = RMSE_np(X_test,pred)
+						res.append(rmse)
+						if count/3 == 15:
+							plotData(iters,res,'alpha','RMSE')
+							plotData(iters,resj,'alpha','J')
+					'''
 				print "#################"
 				print 'k ',str(k)
 				print 'lambda ',str(_lambda)
 				print 'alpha ',str(alpha)
-				#print '\n'
-				#print tmp
-				rmse = RMSE_np(X_test,tmp)
-				if maxs['max']>rmse:
-					maxs['k']=k
-					maxs['lambda']=_lambda
-					maxs['alpha']=alpha
-					maxs['max']=rmse
-				res.append(rmse)
+				print 'j',str(j)
+				pred = u.dot(v.T)
+				pred = np.delete(pred,diff,axis=1)
+				rmse = RMSE_np(X_test,pred)
 				print 'rmse ',str(rmse)
-			print 'result: lambda=',str(_lambda),'k=',str(k)
-			print res
-			print resj
-			#if _lambda==0.01 and k==50:
-			#	plotData(alphas,res,'alpha','RMSE')
-			#	plotData(alphas,resj,'alpha','J')
-	print maxs
+				if mins['min']>rmse:
+					mins['k']=k
+					mins['lambda']=_lambda
+					mins['alpha']=alpha
+					mins['min']=rmse
+	print mins
 	pass
 
 def plotData(x,y,xstr,ystr):
@@ -172,14 +191,17 @@ def plotData(x,y,xstr,ystr):
 	plt.show()
 
 if __name__ == '__main__':
-	print 'start read train'
-	print 'start read test'
-	(train,test,uid,fid) = readCSV()
-	print 'start proc train'
-	X_train = procData(train)
-	print 'start proc test'
-	X_test = procData(test)
-
+	#print 'start read'
+	#(train,test,uid,fid) = readCSV()
+	#print 'start proc'
+	#X_train,X_test,diff = procData(train,test)
+	#X_train.to_csv('data/train.pkl')
+        #X_test.to_csv('data/test.pkl')
+	
+	X_train = pd.read_csv('data/train.pkl',index_col='uid')
+	X_test = pd.read_csv('data/test.pkl',index_col='uid')
+	diff = [448, 3233, 8213, 4293, 2536, 6902, 6635, 5036, 5485, 7374, 8145, 4372, 7029, 5192, 9978, 4859, 9118]
+        import time
 	'''
 	starttime = time.time()
 	start = time.clock()
@@ -194,14 +216,13 @@ if __name__ == '__main__':
 	#X_train = procData_np(train)
 	#X_test = procData_np(test)
 	'''
-
 	import time
 	print 'start clock'
 	starttime = time.time()
 	start = time.clock()
 
-	#Task1_np(X_train.values,X_test.values)	
-	Task2(X_train,X_test)
+	#Task1_np(X_train.values,X_test.values,diff)	
+	Task2(X_train.values,X_test.values,diff)
 
 	end = time.clock()
         endtime = time.time()
