@@ -10,7 +10,7 @@ from numpy import linalg as LA
 import gc
 
 def readCSV():
-	train = pd.read_csv('/Users/emma/Work/Netflix/data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
+	train = pd.read_csv('/Users/emma/Work/Netflix/data/netflix_train.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False,parse_dates=['time'])
 	test = pd.read_csv('/Users/emma/Work/Netflix/data/netflix_test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
 	#train = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
 	#test = pd.read_csv('data/test.txt',sep=' ',header=None,names=['uid','fid','score','time'],index_col=False)
@@ -39,12 +39,29 @@ def procData(train,test):
                	df1.loc[d['uid'],d['fid']]=d['score']
 	for index, d in test.iterrows():
              	df2.loc[d['uid'],d['fid']]=d['score']
-	del train
-	del test
+	#del train
+	#del test
 	gc.collect()
 	df1 = df1.fillna(0)
 	df2 = df2.fillna(0)
 	return (df1,df2,diff)
+
+def procData_sim(train):
+	uids = train.drop_duplicates(['uid'])['uid']
+	fids = train.drop_duplicates(['fid'])['fid'].sort_values()
+	df = pd.DataFrame(index= fids,columns=fids)
+	for uid in uids:
+		x = train[train['uid']==uid]
+		x = x.sort_values(['time','fid'])
+		for i in xrange(0,len(x)-1):
+			timedelta = float((x.iloc[i+1,3]-x.iloc[i,3]).total_seconds())/86400+1
+			if timedelta>3:
+				continue
+			df.loc[x.iloc[i,1],x.iloc[i+1,1]]=0.2**(timedelta)
+			df.loc[x.iloc[i+1,1],x.iloc[i,1]]=0.2**(timedelta)
+	print df.values.shape
+	df = df.fillna(0)
+	return df
 '''
 def procData_np(data):
 	uids = data.uid.unique().shape[0]
@@ -130,16 +147,19 @@ def calJV(a,x,u,v,_lambda):
 
 def Task2(x,X_test,diff):
 	#ks = [10,20,30,40,50,60,70,80,90]
-	ks = np.arange(10,90,10)
+	#ks = np.arange(10,40,10)
+	ks=[30]
 	mins = {'k':0,'lambda':0,'alpha':0,'min':1000}
 	for k in ks :
 		#_lambdas = [0.001,0.003,0.006,0.009,0.01,0.03,0.06,0.09,0.1]
-		_lambdas = np.arange(0.001,0.1,0.04)
-		_lambdas = [0.01]
+		#_lambdas = np.arange(0.001,0.1,0.04)
+		#_lambdas = [0.001,0.009,0.002]
+		_lambdas = [0.009]
 		for _lambda in _lambdas:
 			#alphas = np.arange(0.000001,0.00001,0.000001)
 			#alphas =   [0.00006]
-			alphas = np.arange(0.00001,0.0001,0.00004)
+			#alphas = np.arange(0.00001,0.0001,0.00004)
+			alphas = [0.00009]
 			res = []
 			resj = []
 			for alpha in alphas :
@@ -147,7 +167,7 @@ def Task2(x,X_test,diff):
 				count = 0
 				j = calJ(a,x,u,v,_lambda)
 				iters = []
-				while (count<30 and j>0.001) :
+				while (count<10 and j>0.6) :
 					count += 1
 					u = u - alpha*calJU(a,x,u,v,_lambda)
 					v = v - alpha*calJV(a,x,u,v,_lambda)
@@ -190,16 +210,28 @@ def plotData(x,y,xstr,ystr):
 	plt.yticks(y)
 	plt.show()
 
+def Task3(sim,X_train,X_test,diff):
+	similarity = pairwise_distances(X_train.T, metric='cosine')+sim
+	pred = X_train.dot(similarity) / np.array([np.abs(similarity).sum(axis=1)]) 
+	print X_test
+        print pred
+        pred = np.delete(pred,diff,axis=1)
+        print RMSE_np(X_test,pred)
+
 if __name__ == '__main__':
 	#print 'start read'
 	#(train,test,uid,fid) = readCSV()
 	#print 'start proc'
+	#sim = procData_sim(train)
+	#sim.to_csv('data/sim.pkl')
 	#X_train,X_test,diff = procData(train,test)
 	#X_train.to_csv('data/train.pkl')
         #X_test.to_csv('data/test.pkl')
 	
 	X_train = pd.read_csv('data/train.pkl',index_col='uid')
 	X_test = pd.read_csv('data/test.pkl',index_col='uid')
+	sim = pd.read_csv("data/sim.pkl",index_col='fid')
+	sim = sim.fillna(0)
 	diff = [448, 3233, 8213, 4293, 2536, 6902, 6635, 5036, 5485, 7374, 8145, 4372, 7029, 5192, 9978, 4859, 9118]
         import time
 	'''
@@ -222,8 +254,8 @@ if __name__ == '__main__':
 	start = time.clock()
 
 	#Task1_np(X_train.values,X_test.values,diff)	
-	Task2(X_train.values,X_test.values,diff)
-
+	#Task2(X_train.values,X_test.values,diff)
+	Task3(sim.values,X_train.values,X_test.values,diff)
 	end = time.clock()
         endtime = time.time()
         print 'time : ',str(end-start)
